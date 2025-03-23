@@ -1,0 +1,261 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
+
+public class DataVisualization extends JFrame {
+    private JTable dataTable;
+    private DefaultTableModel tableModel;
+    private JPanel chartPanel;
+    private String currentChart = "Pie";
+
+    public DataVisualization() {
+        setTitle("Data Visualization");
+        setSize(1200, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Table for data
+        tableModel = new DefaultTableModel();
+        dataTable = new JTable(tableModel);
+        add(new JScrollPane(dataTable), BorderLayout.CENTER);
+
+        // Bottom panel for chart buttons
+        JPanel buttonPanel = new JPanel();
+        JButton pieChartButton = new JButton("Pie Chart");
+        JButton barGraphButton = new JButton("Bar Graph");
+        JButton lineChartButton = new JButton("Line Chart");
+        JButton scatterPlotButton = new JButton("Scatter Plot");
+        JButton areaChartButton = new JButton("Area Chart");
+        JButton resetButton = new JButton("Reset");
+        JButton loadFileButton = new JButton("Load Data from File");
+        JButton inputDataButton = new JButton("Enter Data Manually");
+        buttonPanel.add(pieChartButton);
+        buttonPanel.add(barGraphButton);
+        buttonPanel.add(lineChartButton);
+        buttonPanel.add(scatterPlotButton);
+        buttonPanel.add(areaChartButton);
+        buttonPanel.add(resetButton);
+        buttonPanel.add(loadFileButton);
+        buttonPanel.add(inputDataButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+
+        // Panel for chart display
+        chartPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                switch (currentChart) {
+                    case "Pie":
+                        drawPieChart(g);
+                        break;
+                    case "Bar":
+                        drawBarGraph(g);
+                        break;
+                    case "Line":
+                        drawLineChart(g);
+                        break;
+                    case "Scatter":
+                        drawScatterPlot(g);
+                        break;
+                    case "Area":
+                        drawAreaChart(g);
+                        break;
+                }
+            }
+        };
+        chartPanel.setPreferredSize(new Dimension(500, 500));
+        add(chartPanel, BorderLayout.EAST);
+
+        // Action listeners
+        resetButton.addActionListener(e -> {
+            tableModel.setRowCount(0);
+            chartPanel.repaint();
+        });
+
+        loadFileButton.addActionListener(e -> loadFileData());
+
+        inputDataButton.addActionListener(e -> enterDataManually());
+
+        pieChartButton.addActionListener(e -> {
+            currentChart = "Pie";
+            chartPanel.repaint();
+        });
+
+        barGraphButton.addActionListener(e -> {
+            currentChart = "Bar";
+            chartPanel.repaint();
+        });
+
+        lineChartButton.addActionListener(e -> {
+            currentChart = "Line";
+            chartPanel.repaint();
+        });
+
+
+
+        scatterPlotButton.addActionListener(e -> {
+            currentChart = "Scatter";
+            chartPanel.repaint();
+        });
+
+        areaChartButton.addActionListener(e -> {
+            currentChart = "Area";
+            chartPanel.repaint();
+        });
+    }
+
+    // Method to load data from file with dynamic column handling
+    private void loadFileData() {
+        JFileChooser fileChooser = new JFileChooser();
+        int returnValue = fileChooser.showOpenDialog(this);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            try (BufferedReader br = new BufferedReader(new FileReader(selectedFile))) {
+                String line = br.readLine(); // Read header
+                if (line != null) {
+                    String[] columns = line.split(","); // Get column headers
+                    tableModel.setColumnIdentifiers(columns); // Set column headers dynamically
+                }
+                tableModel.setRowCount(0); // Clear current data
+
+                while ((line = br.readLine()) != null) {
+                    String[] parts = line.split(","); // Split row data based on commas
+                    tableModel.addRow(parts); // Add row dynamically based on the data
+                }
+                chartPanel.repaint();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error loading file: " + ex.getMessage(),
+                        "File Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // Method to allow user to input data manually
+    private void enterDataManually() {
+        int numRows = Integer.parseInt(JOptionPane.showInputDialog("Enter number of rows:"));
+        int numColumns = Integer.parseInt(JOptionPane.showInputDialog("Enter number of columns:"));
+        String[] columns = new String[numColumns];
+        for (int i = 0; i < numColumns; i++) {
+            columns[i] = JOptionPane.showInputDialog("Enter name of column " + (i + 1) + ":");
+        }
+        tableModel.setColumnIdentifiers(columns); // Set column headers dynamically
+        tableModel.setRowCount(0); // Clear current data
+
+        for (int i = 0; i < numRows; i++) {
+            String[] rowData = new String[numColumns];
+            for (int j = 0; j < numColumns; j++) {
+                rowData[j] = JOptionPane.showInputDialog("Enter data for " + columns[j] + " in row " + (i + 1) + ":");
+            }
+            tableModel.addRow(rowData); // Add row dynamically
+        }
+        chartPanel.repaint();
+    }
+
+    // Drawing methods for different charts
+    private void drawPieChart(Graphics g) {
+        int total = 0;
+        ArrayList<Integer> amounts = new ArrayList<>();
+        ArrayList<String> items = new ArrayList<>();
+
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            int amount = Integer.parseInt((String) tableModel.getValueAt(i, 1));
+            total += amount;
+            amounts.add(amount);
+            items.add((String) tableModel.getValueAt(i, 0));
+        }
+
+        int startAngle = 0;
+        for (int i = 0; i < amounts.size(); i++) {
+            int amount = amounts.get(i);
+            int angle = (int) (360.0 * amount / total);
+            g.setColor(getColor(i));
+            g.fillArc(50, 50, 300, 300, startAngle, angle);
+            int midAngle = startAngle + angle / 2;
+            double theta = Math.toRadians(midAngle);
+            int x = (int) (200 + 100 * Math.cos(theta));
+            int y = (int) (200 - 100 * Math.sin(theta));
+            g.setColor(Color.BLACK);
+            g.drawString(String.format("%.1f%%", (amount * 100.0) / total), x, y);
+            g.drawString(items.get(i) + " (" + amounts.get(i) + ")", 370, 50 + i * 20);
+            startAngle += angle;
+        }
+    }
+
+    private void drawBarGraph(Graphics g) {
+        int width = 50;
+        int x = 50;
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            int amount = Integer.parseInt((String) tableModel.getValueAt(i, 1));
+            g.setColor(getColor(i));
+            g.fillRect(x, 500 - amount * 4, width, amount * 4);
+            g.setColor(Color.BLACK);
+            g.drawString(tableModel.getValueAt(i, 0) + "", x, 520);
+            x += width + 10;
+        }
+    }
+
+
+
+
+    private void drawLineChart(Graphics g) {
+        int prevX = 50;
+        int prevY = 500 - (Integer.parseInt((String) tableModel.getValueAt(0, 1)) * 4);
+        g.setColor(Color.BLACK);
+        for (int i = 1; i < tableModel.getRowCount(); i++) {
+            int x = 50 + i * 60;
+            int y = 500 - (Integer.parseInt((String) tableModel.getValueAt(i, 1)) * 4);
+            g.setColor(Color.BLUE);
+            g.drawLine(prevX, prevY, x, y);
+            prevX = x;
+            prevY = y;
+        }
+    }
+
+    private void drawScatterPlot(Graphics g) {
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            int x = 50 + i * 60;
+            int y = 500 - (Integer.parseInt((String) tableModel.getValueAt(i, 1)) * 4);
+            g.setColor(getColor(i));
+            g.fillOval(x - 5, y - 5, 10, 10);
+        }
+    }
+
+    private void drawAreaChart(Graphics g) {
+        int prevX = 50;
+        int prevY = 500;
+        g.setColor(new Color(0, 100, 255, 100));
+        int[] xPoints = new int[tableModel.getRowCount() + 2];
+        int[] yPoints = new int[tableModel.getRowCount() + 2];
+        xPoints[0] = prevX;
+        yPoints[0] = prevY;
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            int x = 50 + i * 60;
+            int y = 500 - (Integer.parseInt((String) tableModel.getValueAt(i, 1)) * 4);
+            xPoints[i + 1] = x;
+            yPoints[i + 1] = y;
+            g.setColor(getColor(i));
+            g.fillOval(x - 5, y - 5, 10, 10);
+        }
+        xPoints[tableModel.getRowCount() + 1] = 50 + (tableModel.getRowCount() - 1) * 60;
+        yPoints[tableModel.getRowCount() + 1] = 500;
+        g.fillPolygon(xPoints, yPoints, tableModel.getRowCount() + 2);
+    }
+
+    private Color getColor(int index) {
+        Color[] colors = {Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW,
+                Color.ORANGE, Color.MAGENTA, Color.CYAN};
+        return colors[index % colors.length];
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new DataVisualization().setVisible(true));
+    }
+}
